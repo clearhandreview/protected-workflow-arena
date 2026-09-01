@@ -1,0 +1,14 @@
+{
+  "name": "example-ai-workflow",
+  "steps": [
+    {
+      "id": "prepare",
+      "command": "python3 prepare.py"
+    },
+    {
+      "id": "run",
+      "command": "python3 run.py",
+      "depends_on": ["prepare"]
+    }
+  ]
+}

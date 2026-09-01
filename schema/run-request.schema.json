@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schema/run-request.schema.json",
+  "title": "Arena Run Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "workload_type",
+    "submission"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": "1.0"
+    },
+    "workload_type": {
+      "enum": [
+        "ai",
+        "kubernetes"
+      ]
+    },
+    "submission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filename",
+        "media_type",
+        "content_base64"
+      ],
+      "properties": {
+        "filename": {
+          "type": "string",
+          "minLength": 1
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_base64": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

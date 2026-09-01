@@ -1,0 +1,12 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: arena-example
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: example
+          image: python:3.11-slim
+          command: ["python3", "-c", "print('arena example')"]

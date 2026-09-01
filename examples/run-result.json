@@ -1,0 +1,8 @@
+{
+  "protocol_version": "1.0",
+  "run_id": "run_example",
+  "state": "finished",
+  "outcome": "passed",
+  "output_available": false,
+  "request_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}
