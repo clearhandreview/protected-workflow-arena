@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -22,7 +23,31 @@ PROTOCOL_VERSION = "1.0"
 WORKLOAD_TYPES = {"ai", "kubernetes"}
 STATES = {"accepted", "running", "finished"}
 OUTCOMES = {"passed", "failed", "contained", "rejected", "timeout"}
+PUBLIC_ERROR_CODES = {
+    "INVALID_REQUEST",
+    "UNAUTHORIZED",
+    "NOT_FOUND",
+    "RATE_LIMITED",
+    "SERVICE_UNAVAILABLE",
+}
+BASE_RESULT_FIELDS = {"protocol_version", "run_id", "state"}
+FINISHED_RESULT_FIELDS = BASE_RESULT_FIELDS | {
+    "outcome",
+    "output_available",
+    "request_digest",
+    "output_digest",
+}
+PUBLIC_ERROR_FIELDS = {"protocol_version", "error", "request_id"}
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9._:-]+$")
+REQUEST_ID_RE = re.compile(r"^req_[A-Za-z0-9_-]{1,64}$")
+
+
+class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+URL_OPENER = urllib.request.build_opener(NoRedirectHandler())
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -68,6 +93,11 @@ def validate_public_result(payload: dict) -> None:
     state = payload.get("state")
     if state not in STATES:
         raise ValueError("invalid state")
+
+    allowed_fields = FINISHED_RESULT_FIELDS if state == "finished" else BASE_RESULT_FIELDS
+    if payload.keys() - allowed_fields:
+        raise ValueError("service response contains undocumented fields")
+
     if state == "finished":
         if payload.get("outcome") not in OUTCOMES:
             raise ValueError("finished results require a valid outcome")
@@ -76,6 +106,39 @@ def validate_public_result(payload: dict) -> None:
         digest = payload.get("request_digest")
         if not isinstance(digest, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
             raise ValueError("finished results require request_digest")
+        output_digest = payload.get("output_digest")
+        if output_digest is not None and (
+            not isinstance(output_digest, str)
+            or not re.fullmatch(r"sha256:[0-9a-f]{64}", output_digest)
+        ):
+            raise ValueError("invalid output_digest")
+
+
+def sanitize_public_error(raw: bytes) -> dict:
+    fallback = {
+        "protocol_version": PROTOCOL_VERSION,
+        "error": "SERVICE_UNAVAILABLE",
+    }
+    try:
+        decoded = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return fallback
+    if not isinstance(decoded, dict):
+        return fallback
+    if decoded.keys() - PUBLIC_ERROR_FIELDS:
+        return fallback
+    if decoded.get("protocol_version") != PROTOCOL_VERSION:
+        return fallback
+    if decoded.get("error") not in PUBLIC_ERROR_CODES:
+        return fallback
+    request_id = decoded.get("request_id")
+    if not isinstance(request_id, str) or not REQUEST_ID_RE.fullmatch(request_id):
+        return fallback
+    return {
+        "protocol_version": PROTOCOL_VERSION,
+        "error": decoded["error"],
+        "request_id": request_id,
+    }
 
 
 def request_json(method: str, url: str, payload: dict | None = None) -> dict:
@@ -89,14 +152,10 @@ def request_json(method: str, url: str, payload: dict | None = None) -> dict:
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=60) as response:
+        with URL_OPENER.open(req, timeout=60) as response:
             raw = response.read()
     except urllib.error.HTTPError as exc:
-        raw = exc.read()
-        try:
-            public_error = json.loads(raw.decode("utf-8"))
-        except Exception:
-            public_error = {"error": "SERVICE_UNAVAILABLE"}
+        public_error = sanitize_public_error(exc.read())
         print(json.dumps(public_error, indent=2), file=sys.stderr)
         raise SystemExit(1)
     except urllib.error.URLError:
@@ -116,6 +175,11 @@ def api_base() -> str:
     value = os.environ.get("ARENA_API_URL", "").strip()
     if not value:
         raise ValueError("ARENA_API_URL is required for network operations")
+    parsed = urllib.parse.urlsplit(value)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError("ARENA_API_URL must be an https URL")
+    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise ValueError("ARENA_API_URL must not contain credentials, a query, or a fragment")
     return value.rstrip("/")
 
 
