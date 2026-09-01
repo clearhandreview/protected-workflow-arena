@@ -1,12 +1,12 @@
 ---
 name: protected-workflow-arena
-description: Submit and track AI workflow or Kubernetes test runs through the repository's public protected-execution client.
+description: Validate, submit, and check AI workflow or Kubernetes test runs through the repository's public Arena CLI.
 ---
 
 # Protected Workflow Arena
 
 Use this skill when a task asks to test, submit, replay, or check the result of an AI workflow or
-Kubernetes workload through the arena.
+Kubernetes workload through Arena.
 
 ## Commands
 
@@ -33,14 +33,16 @@ python3 cli/arena.py status <RUN_ID>
 Save the public result:
 
 ```bash
-python3 cli/arena.py status <RUN_ID> --save-ledger
+python3 cli/arena.py status <RUN_ID> --kind <ai|kubernetes> --save-ledger
 ```
 
 ## Rules
 
+- Use `cli/arena.py` as the only Arena integration boundary.
+- Do not construct direct service requests, enumerate service routes, or probe transport behavior.
 - Require `ARENA_API_URL` for network operations.
-- Use `ARENA_API_TOKEN` when the service requires authentication.
-- Report only fields returned by the public contract.
+- Use `ARENA_API_TOKEN` only from the process environment when authentication is required.
+- Report only the JSON printed by the CLI.
 - Do not infer why a run produced its outcome.
-- Do not add undocumented telemetry, diagnostic, tuning, or trace fields.
-- Do not store credentials in the run ledger.
+- Do not request or add undocumented telemetry, diagnostic, tuning, trace, digest, or backend fields.
+- Do not store credentials, workload contents, request digests, or output digests in the run ledger.

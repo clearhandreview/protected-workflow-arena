@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/schema/run-result.schema.json",
-  "title": "Arena Run Result",
+  "title": "Arena Public CLI Result",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -32,17 +32,6 @@
         "rejected",
         "timeout"
       ]
-    },
-    "output_available": {
-      "type": "boolean"
-    },
-    "request_digest": {
-      "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
-    },
-    "output_digest": {
-      "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
     }
   },
   "allOf": [
@@ -56,9 +45,7 @@
       },
       "then": {
         "required": [
-          "outcome",
-          "output_available",
-          "request_digest"
+          "outcome"
         ]
       }
     }

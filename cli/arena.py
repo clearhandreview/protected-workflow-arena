@@ -197,11 +197,22 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def public_result_view(result: dict) -> dict:
+    view = {
+        "protocol_version": result["protocol_version"],
+        "run_id": result["run_id"],
+        "state": result["state"],
+    }
+    if "outcome" in result:
+        view["outcome"] = result["outcome"]
+    return view
+
+
 def cmd_submit(args: argparse.Namespace) -> int:
     payload, _ = build_request(args.kind, Path(args.file))
     result = request_json("POST", api_base() + "/v1/runs", payload)
     validate_public_result(result)
-    print(json.dumps(result, indent=2))
+    print(json.dumps(public_result_view(result), indent=2))
     return 0
 
 
@@ -210,25 +221,15 @@ def cmd_status(args: argparse.Namespace) -> int:
         raise ValueError("invalid run_id")
     result = request_json("GET", api_base() + "/v1/runs/" + args.run_id)
     validate_public_result(result)
-    print(json.dumps(result, indent=2))
+    visible = public_result_view(result)
+    print(json.dumps(visible, indent=2))
     if args.save_ledger:
-        workload_type = args.kind
-        digest = result.get("request_digest")
-        if workload_type is None:
+        if args.kind is None:
             raise ValueError("--kind is required with --save-ledger")
-        if not digest:
-            raise ValueError("service result does not yet include request_digest")
         entry = {
-            "protocol_version": PROTOCOL_VERSION,
-            "run_id": result["run_id"],
-            "workload_type": workload_type,
-            "state": result["state"],
-            "request_digest": digest,
+            **visible,
+            "workload_type": args.kind,
         }
-        if "outcome" in result:
-            entry["outcome"] = result["outcome"]
-        if "output_digest" in result:
-            entry["output_digest"] = result["output_digest"]
         out_dir = Path("ledger/runs")
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{result['run_id']}.json"

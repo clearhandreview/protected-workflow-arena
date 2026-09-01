@@ -9,10 +9,11 @@ The public contract is intentionally outcome-only. A client can:
 - check run state;
 - retrieve the final public result;
 - store that result in the run ledger;
-- validate request and result files locally.
+- validate workload files locally.
 
-The contract does not include diagnostic traces, tuning parameters, resource telemetry, or
-decision details.
+The contract does not include diagnostic traces, tuning parameters, resource telemetry, decision
+details, request digests, or output digests. Transport-only service fields are not displayed or
+written to the public ledger.
 
 ## Repository layout
 
@@ -21,7 +22,7 @@ decision details.
 .kilo/skills/protected-workflow-arena/SKILL.md
 cli/arena.py
 schema/run-request.schema.json
-schema/run-result.schema.json
+schema/run-result.schema.json  # CLI-visible result
 schema/run-ledger-entry.schema.json
 examples/
 ledger/runs/
@@ -36,6 +37,17 @@ PUBLISHING.md
 Python 3.11+
 
 Dependencies: Python standard library only.
+
+## Kilo CLI usage
+
+Kilo should use this repository through the Arena CLI only. The project skill under
+`.kilo/skills/protected-workflow-arena/` tells Kilo which commands are supported.
+
+The service URL and token are transport configuration. They are not an invitation to call service
+routes directly, enumerate endpoints, or inspect backend behavior outside the CLI contract.
+
+A project `kilo.json` keeps Arena CLI commands available while leaving unrelated shell commands
+behind Kilo's normal approval prompt.
 
 ## Configure the client
 

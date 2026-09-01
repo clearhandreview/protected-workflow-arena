@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import os
 import tempfile
 import unittest
 import urllib.error
@@ -107,6 +108,59 @@ class ArenaContractTests(unittest.TestCase):
                 "protocol_version": "1.0",
                 "error": "INVALID_REQUEST",
                 "request_id": "req_test",
+            },
+        )
+
+    def test_public_result_view_hides_transport_metadata(self):
+        result = {
+            "protocol_version": "1.0",
+            "run_id": "run_test",
+            "state": "finished",
+            "outcome": "passed",
+            "output_available": True,
+            "request_digest": "sha256:" + "1" * 64,
+            "output_digest": "sha256:" + "2" * 64,
+        }
+        arena.validate_public_result(result)
+        self.assertEqual(
+            arena.public_result_view(result),
+            {
+                "protocol_version": "1.0",
+                "run_id": "run_test",
+                "state": "finished",
+                "outcome": "passed",
+            },
+        )
+
+    def test_saved_ledger_excludes_transport_metadata(self):
+        result = {
+            "protocol_version": "1.0",
+            "run_id": "run_test",
+            "state": "finished",
+            "outcome": "passed",
+            "output_available": True,
+            "request_digest": "sha256:" + "1" * 64,
+            "output_digest": "sha256:" + "2" * 64,
+        }
+        args = arena.argparse.Namespace(run_id="run_test", save_ledger=True, kind="ai")
+        with tempfile.TemporaryDirectory() as tmp:
+            previous = Path.cwd()
+            try:
+                os.chdir(tmp)
+                with mock.patch.object(arena, "api_base", return_value="https://arena.example"):
+                    with mock.patch.object(arena, "request_json", return_value=result):
+                        arena.cmd_status(args)
+                entry = json.loads(Path("ledger/runs/run_test.json").read_text(encoding="utf-8"))
+            finally:
+                os.chdir(previous)
+        self.assertEqual(
+            entry,
+            {
+                "protocol_version": "1.0",
+                "run_id": "run_test",
+                "state": "finished",
+                "outcome": "passed",
+                "workload_type": "ai",
             },
         )
 

@@ -40,3 +40,15 @@ collapse to `SERVICE_UNAVAILABLE` without echoing backend-provided diagnostic fi
 
 Network operations require HTTPS and do not follow HTTP redirects. This prevents a redirect from
 forwarding the Arena bearer token to another origin.
+
+## Agent boundary
+
+Kilo and other agents must invoke Arena through `cli/arena.py`. Do not construct direct service
+requests from `ARENA_API_URL`, enumerate service paths, or treat transport behavior as a diagnostic
+surface.
+
+The CLI intentionally emits a smaller public view than it may receive from the service. Transport
+metadata such as request/output digests is not printed or persisted to the public ledger.
+
+Project configuration must not contain real credentials. Keep tokens in the process environment and
+scope them to the public test service only.

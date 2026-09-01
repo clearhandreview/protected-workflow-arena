@@ -8,8 +8,7 @@
     "protocol_version",
     "run_id",
     "workload_type",
-    "state",
-    "request_digest"
+    "state"
   ],
   "properties": {
     "protocol_version": {
@@ -40,14 +39,6 @@
         "rejected",
         "timeout"
       ]
-    },
-    "request_digest": {
-      "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
-    },
-    "output_digest": {
-      "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
     }
   }
 }

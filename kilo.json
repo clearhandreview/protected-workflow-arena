@@ -1,0 +1,10 @@
+{
+  "permission": {
+    "bash": {
+      "*": "ask",
+      "python3 cli/arena.py validate *": "allow",
+      "python3 cli/arena.py submit *": "allow",
+      "python3 cli/arena.py status *": "allow"
+    }
+  }
+}

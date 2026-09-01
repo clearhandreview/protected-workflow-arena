@@ -1,44 +1,41 @@
-# Public Arena Contract — v1
+# Public Arena CLI Contract — v1
 
 ## Purpose
 
-This contract defines the information exchanged between a workflow client and the protected
-execution service.
+This contract defines what a user or agent may rely on when invoking the public Arena CLI.
 
-The contract is intentionally narrow so integrations depend only on stable public behavior.
+The CLI is the supported integration boundary. Service routes, backend topology, implementation
+details, diagnostic data, and private execution records are outside this contract.
 
-## Authentication
+## Configuration
 
-Clients send a bearer token:
+Network-backed commands read:
 
 ```text
-Authorization: Bearer <token>
+ARENA_API_URL
+ARENA_API_TOKEN
 ```
+
+Treat both as operator-provided configuration. Do not print the token, commit it, or derive
+additional service requests from the configured URL.
+
+## Validate
+
+```bash
+python3 cli/arena.py validate --kind ai --file <PATH>
+python3 cli/arena.py validate --kind kubernetes --file <PATH>
+```
+
+Validation is local and does not submit the workload.
 
 ## Submit
 
-`POST /v1/runs`
-
-Request body:
-
-```json
-{
-  "protocol_version": "1.0",
-  "workload_type": "ai",
-  "submission": {
-    "filename": "workflow.json",
-    "media_type": "application/json",
-    "content_base64": "..."
-  }
-}
+```bash
+python3 cli/arena.py submit --kind ai --file <PATH>
+python3 cli/arena.py submit --kind kubernetes --file <PATH>
 ```
 
-`workload_type` is one of:
-
-- `ai`
-- `kubernetes`
-
-A successful submission returns:
+A successful submission exposes only:
 
 ```json
 {
@@ -50,9 +47,11 @@ A successful submission returns:
 
 ## Status
 
-`GET /v1/runs/{run_id}`
+```bash
+python3 cli/arena.py status <RUN_ID>
+```
 
-A run that has not finished returns:
+A non-final result exposes only:
 
 ```json
 {
@@ -62,17 +61,14 @@ A run that has not finished returns:
 }
 ```
 
-A finished run returns:
+A finished result exposes only:
 
 ```json
 {
   "protocol_version": "1.0",
   "run_id": "run_...",
   "state": "finished",
-  "outcome": "passed",
-  "output_available": true,
-  "request_digest": "sha256:...",
-  "output_digest": "sha256:..."
+  "outcome": "passed"
 }
 ```
 
@@ -84,21 +80,14 @@ A finished run returns:
 - `rejected`
 - `timeout`
 
-`output_digest` is optional when no public output exists.
+No diagnostic meaning beyond the named outcome is part of the public contract.
 
-## Public error shape
+## Public errors
 
-Errors use a fixed shape:
+Errors use a fixed public shape and code set. The CLI does not expose arbitrary service-provided
+diagnostics.
 
-```json
-{
-  "protocol_version": "1.0",
-  "error": "INVALID_REQUEST",
-  "request_id": "req_..."
-}
-```
-
-The public contract defines these error codes:
+The public error codes are:
 
 - `INVALID_REQUEST`
 - `UNAUTHORIZED`
@@ -106,21 +95,18 @@ The public contract defines these error codes:
 - `RATE_LIMITED`
 - `SERVICE_UNAVAILABLE`
 
-Diagnostic fields are not part of the public API.
-
 ## Run ledger
 
-The public run ledger records only:
+With `--save-ledger`, the CLI stores only:
 
 - protocol version;
 - run id;
 - workload type;
 - state;
-- final outcome, when available;
-- request digest;
-- output digest, when available.
+- final outcome, when available.
 
-The ledger is a result record, not a diagnostic trace.
+Request digests, output digests, workload contents, traces, telemetry, diagnostic explanations, and
+undocumented service fields are not part of the public ledger.
 
 ## Compatibility
 
