@@ -6,12 +6,99 @@ on:
 
 jobs:
   public-contract:
-    runs-on: ubuntu-latest
+    name: Host / ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+            python: python3
+          - name: macOS
+            os: macos-latest
+            python: python3
+          - name: Windows
+            os: windows-latest
+            python: py -3.11
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python3 -m unittest discover -s tests -v
-      - run: python3 cli/arena.py validate --kind ai --file examples/ai-workflow.json
-      - run: python3 cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml
+
+      - run: ${{ matrix.python }} -m unittest discover -s tests -v
+
+      - run: ${{ matrix.python }} cli/arena.py validate --kind ai --file examples/ai-workflow.json
+
+      - run: ${{ matrix.python }} cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml
+
+  linux-distros:
+    name: Linux / ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 24.04
+            image: ubuntu:24.04
+            install: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3
+            python: python3
+
+          - name: Debian 12
+            image: debian:12
+            install: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3
+            python: python3
+
+          - name: Debian 13
+            image: debian:13
+            install: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3
+            python: python3
+
+          - name: Fedora
+            image: fedora:latest
+            install: dnf install -y python3
+            python: python3
+
+          - name: Rocky Linux 9
+            image: rockylinux/rockylinux:9
+            install: dnf install -y python3.11
+            python: python3.11
+
+          - name: Rocky Linux 10
+            image: rockylinux/rockylinux:10
+            install: dnf install -y python3
+            python: python3
+
+          - name: Alpine 3.20
+            image: alpine:3.20
+            install: apk add --no-cache python3
+            python: python3
+
+          - name: Alpine 3.24
+            image: alpine:3.24
+            install: apk add --no-cache python3
+            python: python3
+
+          - name: openSUSE Tumbleweed
+            image: opensuse/tumbleweed:latest
+            install: zypper --non-interactive refresh && zypper --non-interactive install python3
+            python: python3
+
+          - name: Arch Linux
+            image: archlinux:latest
+            install: pacman -Sy --noconfirm python
+            python: python3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test in ${{ matrix.name }}
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            "${{ matrix.image }}" \
+            sh -lc '${{ matrix.install }} && ${{ matrix.python }} --version && ${{ matrix.python }} -m unittest discover -s tests -v && ${{ matrix.python }} cli/arena.py validate --kind ai --file examples/ai-workflow.json && ${{ matrix.python }} cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml'
