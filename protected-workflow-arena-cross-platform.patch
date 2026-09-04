@@ -1,0 +1,306 @@
+diff --git a/.agents/skills/protected-workflow-arena/SKILL.md b/.agents/skills/protected-workflow-arena/SKILL.md
+index ad7d96a..68cbf9b 100644
+--- a/.agents/skills/protected-workflow-arena/SKILL.md
++++ b/.agents/skills/protected-workflow-arena/SKILL.md
+@@ -10,30 +10,32 @@ Kubernetes workload through the arena.
+ 
+ ## Commands
+ 
++Use a Python 3.11+ interpreter available on the host: `python3` on Linux/macOS or `py -3.11` on Windows PowerShell. The examples below use `python`; substitute the host command when needed.
++
+ Validate locally:
+ 
+ ```bash
+-python3 cli/arena.py validate --kind ai --file <PATH>
+-python3 cli/arena.py validate --kind kubernetes --file <PATH>
++python cli/arena.py validate --kind ai --file <PATH>
++python cli/arena.py validate --kind kubernetes --file <PATH>
+ ```
+ 
+ Submit:
+ 
+ ```bash
+-python3 cli/arena.py submit --kind ai --file <PATH>
+-python3 cli/arena.py submit --kind kubernetes --file <PATH>
++python cli/arena.py submit --kind ai --file <PATH>
++python cli/arena.py submit --kind kubernetes --file <PATH>
+ ```
+ 
+ Check:
+ 
+ ```bash
+-python3 cli/arena.py status <RUN_ID>
++python cli/arena.py status <RUN_ID>
+ ```
+ 
+ Save the public result:
+ 
+ ```bash
+-python3 cli/arena.py status <RUN_ID> --save-ledger
++python cli/arena.py status <RUN_ID> --save-ledger
+ ```
+ 
+ ## Rules
+diff --git a/.github/workflows/validate.yml b/.github/workflows/validate.yml
+index 1667e7d..27d3468 100644
+--- a/.github/workflows/validate.yml
++++ b/.github/workflows/validate.yml
+@@ -6,12 +6,16 @@ on:
+ 
+ jobs:
+   public-contract:
+-    runs-on: ubuntu-latest
++    strategy:
++      fail-fast: false
++      matrix:
++        os: [ubuntu-latest, macos-latest, windows-latest]
++    runs-on: ${{ matrix.os }}
+     steps:
+       - uses: actions/checkout@v4
+       - uses: actions/setup-python@v5
+         with:
+           python-version: "3.11"
+-      - run: python3 -m unittest discover -s tests -v
+-      - run: python3 cli/arena.py validate --kind ai --file examples/ai-workflow.json
+-      - run: python3 cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml
++      - run: python -m unittest discover -s tests -v
++      - run: python cli/arena.py validate --kind ai --file examples/ai-workflow.json
++      - run: python cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml
+diff --git a/.kilo/skills/protected-workflow-arena/SKILL.md b/.kilo/skills/protected-workflow-arena/SKILL.md
+index ad7d96a..68cbf9b 100644
+--- a/.kilo/skills/protected-workflow-arena/SKILL.md
++++ b/.kilo/skills/protected-workflow-arena/SKILL.md
+@@ -10,30 +10,32 @@ Kubernetes workload through the arena.
+ 
+ ## Commands
+ 
++Use a Python 3.11+ interpreter available on the host: `python3` on Linux/macOS or `py -3.11` on Windows PowerShell. The examples below use `python`; substitute the host command when needed.
++
+ Validate locally:
+ 
+ ```bash
+-python3 cli/arena.py validate --kind ai --file <PATH>
+-python3 cli/arena.py validate --kind kubernetes --file <PATH>
++python cli/arena.py validate --kind ai --file <PATH>
++python cli/arena.py validate --kind kubernetes --file <PATH>
+ ```
+ 
+ Submit:
+ 
+ ```bash
+-python3 cli/arena.py submit --kind ai --file <PATH>
+-python3 cli/arena.py submit --kind kubernetes --file <PATH>
++python cli/arena.py submit --kind ai --file <PATH>
++python cli/arena.py submit --kind kubernetes --file <PATH>
+ ```
+ 
+ Check:
+ 
+ ```bash
+-python3 cli/arena.py status <RUN_ID>
++python cli/arena.py status <RUN_ID>
+ ```
+ 
+ Save the public result:
+ 
+ ```bash
+-python3 cli/arena.py status <RUN_ID> --save-ledger
++python cli/arena.py status <RUN_ID> --save-ledger
+ ```
+ 
+ ## Rules
+diff --git a/PUBLISHING.md b/PUBLISHING.md
+index 8620604..7d2ab32 100644
+--- a/PUBLISHING.md
++++ b/PUBLISHING.md
+@@ -1,16 +1,28 @@
+-# Publish from a Linux terminal
++# Publish from Linux, macOS, or Windows
+ 
+ ## 1. Test locally
+ 
++Linux/macOS:
++
+ ```bash
+ python3 -m unittest discover -s tests -v
+ python3 cli/arena.py validate --kind ai --file examples/ai-workflow.json
+ python3 cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml
+ ```
+ 
++Windows PowerShell:
++
++```powershell
++py -3.11 -m unittest discover -s tests -v
++py -3.11 cli/arena.py validate --kind ai --file examples/ai-workflow.json
++py -3.11 cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml
++```
++
+ ## 2. Initialize Git
+ 
+-```bash
++These commands are the same in Bash, zsh, and PowerShell:
++
++```text
+ git init
+ git branch -M main
+ git add .
+@@ -22,19 +34,15 @@ Before committing, confirm no `.env` file or credential is staged.
+ 
+ ## 3. Create the public GitHub repository
+ 
+-With GitHub CLI:
++With GitHub CLI, keep the command on one line so it works in Bash, zsh, and PowerShell:
+ 
+-```bash
+-gh repo create protected-workflow-arena \
+-  --public \
+-  --source=. \
+-  --remote=origin \
+-  --push
++```text
++gh repo create protected-workflow-arena --public --source=. --remote=origin --push
+ ```
+ 
+ ## 4. Verify visibility
+ 
+-```bash
++```text
+ gh repo view --json nameWithOwner,visibility,url
+ ```
+ 
+@@ -48,8 +56,8 @@ Confirm:
+ 
+ Print the repository URL:
+ 
+-```bash
+-gh repo view --json url --jq '.url'
++```text
++gh repo view --json url --jq ".url"
+ ```
+ 
+ Share that URL with tools or developers that need the public client.
+diff --git a/README.md b/README.md
+index 308219b..89104d2 100644
+--- a/README.md
++++ b/README.md
+@@ -37,15 +37,33 @@ Python 3.11+
+ 
+ Dependencies: Python standard library only.
+ 
++## Host compatibility
++
++The client supports Python 3.11+ on Linux, macOS, and Windows. It uses only the Python standard
++library. The CI matrix is configured to exercise all three GitHub-hosted operating systems.
++
++Use `python3` on Linux/macOS. On Windows PowerShell, use `py -3.11` in the commands below.
++
+ ## Configure the client
+ 
++Linux/macOS:
++
+ ```bash
+ export ARENA_API_URL="https://YOUR-ARENA-HOST"
+ export ARENA_API_TOKEN="<YOUR_TOKEN>"
+ ```
+ 
++Windows PowerShell:
++
++```powershell
++$env:ARENA_API_URL = "https://YOUR-ARENA-HOST"
++$env:ARENA_API_TOKEN = "<YOUR_TOKEN>"
++```
++
+ ## Validate a workload without sending it
+ 
++The examples use `python3`; replace it with `py -3.11` on Windows PowerShell.
++
+ AI workflow:
+ 
+ ```bash
+diff --git a/cli/arena.py b/cli/arena.py
+index 2c9ddf3..9f5395d 100644
+--- a/cli/arena.py
++++ b/cli/arena.py
+@@ -16,6 +16,7 @@ import re
+ import sys
+ import urllib.error
+ import urllib.request
++from urllib.parse import quote
+ from pathlib import Path
+ 
+ PROTOCOL_VERSION = "1.0"
+@@ -23,6 +24,17 @@ WORKLOAD_TYPES = {"ai", "kubernetes"}
+ STATES = {"accepted", "running", "finished"}
+ OUTCOMES = {"passed", "failed", "contained", "rejected", "timeout"}
+ RUN_ID_RE = re.compile(r"^[A-Za-z0-9._:-]+$")
++WINDOWS_RESERVED_NAMES = {
++    "CON",
++    "PRN",
++    "AUX",
++    "NUL",
++    *(f"COM{i}" for i in range(1, 10)),
++    *(f"LPT{i}" for i in range(1, 10)),
++}
++
++# Keep MIME detection independent of host registry and /etc/mime.types contents.
++mimetypes.init(files=[])
+ 
+ 
+ def sha256_bytes(data: bytes) -> str:
+@@ -36,6 +48,23 @@ def media_type_for(path: Path, kind: str) -> str:
+     return "application/yaml" if kind == "kubernetes" else "application/json"
+ 
+ 
++def ledger_filename(run_id: str) -> str:
++    encoded = quote(run_id, safe="._-")
++    stem = encoded.split(".", 1)[0].upper()
++    changed = encoded != run_id
++
++    if stem in WINDOWS_RESERVED_NAMES:
++        encoded = "_" + encoded
++        changed = True
++
++    if changed or len(encoded) > 180:
++        digest = hashlib.sha256(run_id.encode("utf-8")).hexdigest()[:16]
++        readable = encoded[:120].rstrip(". ")
++        encoded = f"{readable or 'run'}-{digest}"
++
++    return f"{encoded}.json"
++
++
+ def build_request(kind: str, path: Path) -> tuple[dict, str]:
+     if kind not in WORKLOAD_TYPES:
+         raise ValueError("kind must be ai or kubernetes")
+@@ -167,8 +196,8 @@ def cmd_status(args: argparse.Namespace) -> int:
+             entry["output_digest"] = result["output_digest"]
+         out_dir = Path("ledger/runs")
+         out_dir.mkdir(parents=True, exist_ok=True)
+-        out_path = out_dir / f"{result['run_id']}.json"
+-        out_path.write_text(json.dumps(entry, indent=2) + "\n", encoding="utf-8")
++        out_path = out_dir / ledger_filename(result["run_id"])
++        out_path.write_text(json.dumps(entry, indent=2) + "\n", encoding="utf-8", newline="\n")
+         print(f"SAVED: {out_path}", file=sys.stderr)
+     return 0
+ 
+diff --git a/tests/test_contract.py b/tests/test_contract.py
+index 873c8bf..aeb8295 100644
+--- a/tests/test_contract.py
++++ b/tests/test_contract.py
+@@ -27,6 +27,17 @@ class ArenaContractTests(unittest.TestCase):
+             payload, _ = arena.build_request("kubernetes", path)
+             self.assertEqual(payload["workload_type"], "kubernetes")
+ 
++    def test_media_types_do_not_depend_on_host_configuration(self):
++        self.assertEqual(arena.media_type_for(Path("workflow.json"), "ai"), "application/json")
++        self.assertEqual(arena.media_type_for(Path("job.yaml"), "kubernetes"), "application/yaml")
++        self.assertEqual(arena.media_type_for(Path("job.yml"), "kubernetes"), "application/yaml")
++
++    def test_ledger_filename_is_windows_safe(self):
++        self.assertEqual(arena.ledger_filename("run_test"), "run_test.json")
++        self.assertNotIn(":", arena.ledger_filename("run:123"))
++        self.assertNotEqual(arena.ledger_filename("CON").upper(), "CON.JSON")
++        self.assertTrue(arena.ledger_filename("PRN.txt").startswith("_PRN"))
++
+     def test_finished_public_result(self):
+         payload = {
+             "protocol_version": "1.0",

@@ -1,0 +1,115 @@
+diff --git a/.github/workflows/validate.yml b/.github/workflows/validate.yml
+index 27d3468..e15e987 100644
+--- a/.github/workflows/validate.yml
++++ b/.github/workflows/validate.yml
+@@ -19,3 +19,57 @@ jobs:
+       - run: python -m unittest discover -s tests -v
+       - run: python cli/arena.py validate --kind ai --file examples/ai-workflow.json
+       - run: python cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml
++
++  linux-distributions:
++    runs-on: ubuntu-latest
++    strategy:
++      fail-fast: false
++      matrix:
++        include:
++          - name: Ubuntu 24.04
++            image: ubuntu:24.04
++            install: apt-get update && apt-get install -y --no-install-recommends python3
++            python: python3
++          - name: Debian 12
++            image: debian:bookworm-slim
++            install: apt-get update && apt-get install -y --no-install-recommends python3
++            python: python3
++          - name: Debian 13
++            image: debian:trixie-slim
++            install: apt-get update && apt-get install -y --no-install-recommends python3
++            python: python3
++          - name: Fedora
++            image: fedora:latest
++            install: dnf install -y python3
++            python: python3
++          - name: Rocky Linux 9
++            image: rockylinux:9
++            install: dnf install -y python3.11
++            python: python3.11
++          - name: Rocky Linux 10
++            image: rockylinux:10
++            install: dnf install -y python3
++            python: python3
++          - name: Alpine 3.20
++            image: alpine:3.20
++            install: apk add --no-cache python3
++            python: python3
++          - name: Alpine 3.24
++            image: alpine:3.24
++            install: apk add --no-cache python3
++            python: python3
++          - name: openSUSE Tumbleweed
++            image: opensuse/tumbleweed:latest
++            install: zypper --non-interactive install python313
++            python: python3.13
++          - name: Arch Linux
++            image: archlinux:latest
++            install: pacman -Syu --noconfirm python
++            python: python
++    name: Linux / ${{ matrix.name }}
++    steps:
++      - uses: actions/checkout@v4
++      - name: Test on ${{ matrix.name }}
++        shell: bash
++        run: |
++          docker run --rm -e PYTHONDONTWRITEBYTECODE=1 -v "$GITHUB_WORKSPACE:/work" -w /work "${{ matrix.image }}" sh -lc '${{ matrix.install }} && ${{ matrix.python }} -c "import sys; assert sys.version_info >= (3, 11), sys.version" && ${{ matrix.python }} -m unittest discover -s tests -v && ${{ matrix.python }} cli/arena.py validate --kind ai --file examples/ai-workflow.json && ${{ matrix.python }} cli/arena.py validate --kind kubernetes --file examples/kubernetes-job.yaml'
+diff --git a/PUBLISHING.md b/PUBLISHING.md
+index 7d2ab32..23a00c6 100644
+--- a/PUBLISHING.md
++++ b/PUBLISHING.md
+@@ -1,5 +1,10 @@
+ # Publish from Linux, macOS, or Windows
+ 
++Linux support is not tied to Ubuntu. The runtime target is any Linux distribution that can run
++CPython 3.11+. CI additionally exercises Debian 12/13, Fedora, Rocky Linux 9/10,
++Alpine Linux 3.20/3.24, openSUSE Tumbleweed, and Arch Linux. If your distribution names the interpreter `python` or `python3.11` instead of
++`python3`, substitute that command in the Linux examples below.
++
+ ## 1. Test locally
+ 
+ Linux/macOS:
+diff --git a/README.md b/README.md
+index 89104d2..ce476e3 100644
+--- a/README.md
++++ b/README.md
+@@ -39,10 +39,20 @@ Dependencies: Python standard library only.
+ 
+ ## Host compatibility
+ 
+-The client supports Python 3.11+ on Linux, macOS, and Windows. It uses only the Python standard
+-library. The CI matrix is configured to exercise all three GitHub-hosted operating systems.
++The client supports Python 3.11+ on Linux, macOS, and Windows and uses only the Python standard
++library.
+ 
+-Use `python3` on Linux/macOS. On Windows PowerShell, use `py -3.11` in the commands below.
++Linux support is distribution-agnostic: any Linux distribution that can run CPython 3.11+ is in
++scope. The application code does not require a particular package manager or distribution family.
++CI keeps the normal Ubuntu/macOS/Windows host matrix and also exercises Ubuntu 24.04,
++Debian 12 and 13, Fedora, Rocky Linux 9 and 10, Alpine Linux 3.20 and 3.24 (musl),
++openSUSE Tumbleweed, and Arch Linux in containers.
++
++This does not claim support for obsolete Linux releases that cannot provide or run CPython 3.11+.
++
++On Linux/macOS, use an installed command that resolves to CPython 3.11+; depending on the
++distribution that may be `python3`, `python3.11`, or `python`. On Windows PowerShell, use
++`py -3.11`.
+ 
+ ## Configure the client
+ 
+@@ -62,7 +72,8 @@ $env:ARENA_API_TOKEN = "<YOUR_TOKEN>"
+ 
+ ## Validate a workload without sending it
+ 
+-The examples use `python3`; replace it with `py -3.11` on Windows PowerShell.
++The examples use `python3`; on Linux distributions where that command is not present, substitute
++the host's CPython 3.11+ command. On Windows PowerShell, replace it with `py -3.11`.
+ 
+ AI workflow:
+ 
